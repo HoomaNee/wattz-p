@@ -9,10 +9,10 @@ import android.graphics.*
 import android.graphics.drawable.Icon
 import android.os.IBinder
 import android.util.Log
-import android.widget.RemoteViews // Added: Import for RemoteViews
 import java.time.LocalDateTime
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+
 
 class StatusService : Service() {
     private lateinit var battery: Battery
@@ -23,10 +23,6 @@ class StatusService : Service() {
     private var pluggedInAt: ZonedDateTime? = null
     private lateinit var snapshot: BatterySnapshot
     private val task = PeriodicTask({ update() }, intervalMs)
-
-    // Added: Variables to store notification colors from settings
-    private var notificationBackgroundColor: String = "#FFFFFF"
-    private var notificationTextColor: String = "#000000"
 
     private fun debug(msg: String) {
         Log.d(this::class.java.name, msg)
@@ -58,11 +54,7 @@ class StatusService : Service() {
         val settings = getSharedPreferences(settingsName, MODE_MULTI_PROCESS)
         battery.currentScalar = settings.getFloat("currentScalar", 1f).toDouble()
         battery.invertCurrent = settings.getBoolean("invertCurrent", false)
-        indicatorUnits = settings.getString("indicatorUnits", null)
-
-        // Added: Load notification colors from shared preferences
-        notificationBackgroundColor = settings.getString("notificationBackgroundColor", "#FFFFFF") ?: "#FFFFFF"
-        notificationTextColor = settings.getString("notificationTextColor", "#000000") ?: "#000000"
+        indicatorUnits = settings.getString("indicatorUnits", null);
     }
 
     private fun init() {
@@ -74,7 +66,7 @@ class StatusService : Service() {
             NotificationChannel(
                 noteChannelId,
                 "Power Status",
-                NotificationManager.IMPORTANCE_HIGH
+                NotificationManager.IMPORTANCE_HIGH//Notification priority set high
             ).apply {
                 description = "Continuously displays current battery power consumption"
             }
@@ -91,11 +83,12 @@ class StatusService : Service() {
 
         val ind = getString(R.string.indeterminate)
         noteBuilder = Notification.Builder(this, noteChannelId)
+            .setContentTitle("Battery Draw: $ind W")
             .setSmallIcon(renderIcon(ind, "W"))
             .setContentIntent(noteIntent)
             .setOnlyAlertOnce(true)
-            .setPriority(Notification.PRIORITY_HIGH)
-            .setOngoing(true)
+            .setPriority(Notification.PRIORITY_HIGH)  // Added to maximize notification priority
+            .setOngoing(true)  // Makes the notification non-dismissible and persistent at top
             
         registerReceiver(
             MsgReceiver(),
@@ -107,7 +100,7 @@ class StatusService : Service() {
                 addAction(Intent.ACTION_SCREEN_OFF)
                 addAction(Intent.ACTION_SCREEN_ON)
             },
-            RECEIVER_NOT_EXPORTED
+            RECEIVER_NOT_EXPORTED,
         )
     }
 
@@ -126,7 +119,7 @@ class StatusService : Service() {
             error("Failed to foreground StatusService: ${e.message}")
         }
 
-        return START_STICKY
+        return START_STICKY;
     }
 
     override fun onDestroy() {
@@ -154,13 +147,15 @@ class StatusService : Service() {
         paint.textAlign = Paint.Align.CENTER
         
         if (unit.isEmpty()) {
-            paint.textSize = 45f * density
-            val yPos = (w / 2f) + (paint.textSize / 2f) - paint.descent() / 2f
-            canvas.drawText(value, w / 2f, yPos, paint)
-        } else {
-            paint.textSize = 28f * density
-            canvas.drawText(value, w / 2f, w / 2f, paint)
-            canvas.drawText(unit, w / 2f, w.toFloat(), paint)
+        // Center the number vertically for percentage in center
+        paint.textSize = 45f * density //Increase icon size 
+        val yPos = (w / 2f) + (paint.textSize / 2f) - paint.descent() / 2f  // Center vertically
+        canvas.drawText(value, w / 2f, yPos, paint)
+          } else {
+        // Original logic for other units (value on top, unit on bottom)
+        paint.textSize = 28f * density
+        canvas.drawText(value, w / 2f, w / 2f, paint)
+        canvas.drawText(unit, w / 2f, w.toFloat(), paint)
         }
         
         return Icon.createWithBitmap(bitmap)
@@ -223,7 +218,7 @@ class StatusService : Service() {
             "%" -> "Level"
             else -> getString(R.string.power)
         }
-        val txtValue = fmt(when (indicatorUnits) {
+        val txtValue = fmt( when (indicatorUnits) {
             "A" -> snapshot.amps
             "Ah" -> snapshot.energyAmpHours
             "C" -> snapshot.celsius
@@ -246,38 +241,17 @@ class StatusService : Service() {
 
         val iconUnits = if (indicatorUnits == "%") "" else txtUnits
 
-        // Use custom RemoteViews to apply background and text colors
-        val remoteViews = RemoteViews(packageName, R.layout.custom_notification)
-        try {
-            remoteViews.setInt(R.id.notification_background, "setBackgroundColor", Color.parseColor(notificationBackgroundColor))
-            remoteViews.setTextViewText(R.id.notification_title, title)
-            remoteViews.setTextColor(R.id.notification_title, Color.parseColor(notificationTextColor))
-            
-            val contentText = when(val seconds = snapshot.secondsUntilCharged) {
+        noteBuilder
+            .setContentTitle(title)
+            .setSmallIcon(renderIcon(txtValue, iconUnits))
+
+        noteBuilder.setContentText(
+            when(val seconds = snapshot.secondsUntilCharged) {
                 null -> ""
                 0.0 -> "fully charged"
                 else -> "${fmtSeconds(seconds)} until full charge"
             }
-            remoteViews.setTextViewText(R.id.notification_text, contentText)
-            remoteViews.setTextColor(R.id.notification_text, Color.parseColor(notificationTextColor))
-            
-            noteBuilder
-                .setCustomContentView(remoteViews)
-                .setSmallIcon(renderIcon(txtValue, iconUnits))
-        } catch (e: IllegalArgumentException) {
-            // Fallback if color parsing fails
-            debug("Invalid color format: ${e.message}")
-            noteBuilder
-                .setContentTitle(title)
-                .setContentText(
-                    when(val seconds = snapshot.secondsUntilCharged) {
-                        null -> ""
-                        0.0 -> "fully charged"
-                        else -> "${fmtSeconds(seconds)} until full charge"
-                    }
-                )
-                .setSmallIcon(renderIcon(txtValue, iconUnits))
-        }
+        )
 
         noteMgr.notify(noteId, noteBuilder.build())
 
