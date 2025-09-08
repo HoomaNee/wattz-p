@@ -13,7 +13,6 @@ import java.time.LocalDateTime
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
-
 class StatusService : Service() {
     private lateinit var battery: Battery
     private val dateFmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
@@ -51,10 +50,10 @@ class StatusService : Service() {
     }
 
     private fun loadSettings() {
-        val settings = getSharedPreferences(settingsName, MODE_MULTI_PROCESS)
+        val settings = getSharedPreferences(settingsName, MODE_PRIVATE)  // Updated: MODE_MULTI_PROCESS is deprecated
         battery.currentScalar = settings.getFloat("currentScalar", 1f).toDouble()
         battery.invertCurrent = settings.getBoolean("invertCurrent", false)
-        indicatorUnits = settings.getString("indicatorUnits", null);
+        indicatorUnits = settings.getString("indicatorUnits", null)
     }
 
     private fun init() {
@@ -66,7 +65,7 @@ class StatusService : Service() {
             NotificationChannel(
                 noteChannelId,
                 "Power Status",
-                NotificationManager.IMPORTANCE_HIGH//Notification priority set high
+                NotificationManager.IMPORTANCE_HIGH  // Notification priority set high
             ).apply {
                 description = "Continuously displays current battery power consumption"
             }
@@ -89,7 +88,7 @@ class StatusService : Service() {
             .setOnlyAlertOnce(true)
             .setPriority(Notification.PRIORITY_HIGH)  // Added to maximize notification priority
             .setOngoing(true)  // Makes the notification non-dismissible and persistent at top
-            
+
         registerReceiver(
             MsgReceiver(),
             IntentFilter().apply {
@@ -100,7 +99,7 @@ class StatusService : Service() {
                 addAction(Intent.ACTION_SCREEN_OFF)
                 addAction(Intent.ACTION_SCREEN_ON)
             },
-            RECEIVER_NOT_EXPORTED,
+            RECEIVER_NOT_EXPORTED
         )
     }
 
@@ -119,7 +118,7 @@ class StatusService : Service() {
             error("Failed to foreground StatusService: ${e.message}")
         }
 
-        return START_STICKY;
+        return START_STICKY
     }
 
     override fun onDestroy() {
@@ -145,19 +144,19 @@ class StatusService : Service() {
         paint.style = Paint.Style.FILL
         paint.color = Color.WHITE
         paint.textAlign = Paint.Align.CENTER
-        
+
         if (unit.isEmpty()) {
-        // Center the number vertically for percentage in center
-        paint.textSize = 45f * density //Increase icon size 
-        val yPos = (w / 2f) + (paint.textSize / 2f) - paint.descent() / 2f  // Center vertically
-        canvas.drawText(value, w / 2f, yPos, paint)
-          } else {
-        // Original logic for other units (value on top, unit on bottom)
-        paint.textSize = 28f * density
-        canvas.drawText(value, w / 2f, w / 2f, paint)
-        canvas.drawText(unit, w / 2f, w.toFloat(), paint)
+            // Center the number vertically for percentage in center
+            paint.textSize = 45f * density  // Increase icon size
+            val yPos = (w / 2f) + (paint.textSize / 2f) - paint.descent() / 2f  // Center vertically
+            canvas.drawText(value, w / 2f, yPos, paint)
+        } else {
+            // Original logic for other units (value on top, unit on bottom)
+            paint.textSize = 28f * density
+            canvas.drawText(value, w / 2f, w / 2f, paint)
+            canvas.drawText(unit, w / 2f, w.toFloat(), paint)
         }
-        
+
         return Icon.createWithBitmap(bitmap)
     }
 
@@ -218,7 +217,7 @@ class StatusService : Service() {
             "%" -> getString(R.string.chargeLevel)
             else -> getString(R.string.power)
         }
-        val txtValue = fmt( when (indicatorUnits) {
+        val txtValue = fmt(when (indicatorUnits) {
             "A" -> snapshot.amps
             "Ah" -> snapshot.energyAmpHours
             "C" -> snapshot.celsius
@@ -233,12 +232,19 @@ class StatusService : Service() {
             else -> indicatorUnits ?: "W"
         }
 
+        // Modified: Add watt value in parentheses when showing battery level (%)
+        val displayValue = if (indicatorUnits == "%") {
+            "${txtValue}${txtUnits} (${fmt(snapshot.watts)}W)"
+        } else {
+            "${txtValue}${txtUnits}"
+        }
+
         noteBuilder
-            .setContentTitle("${getString(R.string.battery)} ${txtLabel}: ${txtValue}${txtUnits}")
+            .setContentTitle("${getString(R.string.battery)} ${txtLabel}: $displayValue")
             .setSmallIcon(renderIcon(txtValue, txtUnits))
 
         noteBuilder.setContentText(
-            when(val seconds = snapshot.secondsUntilCharged) {
+            when (val seconds = snapshot.secondsUntilCharged) {
                 null -> ""
                 0.0 -> "fully charged"
                 else -> "${fmtSeconds(seconds)} until full charge"
