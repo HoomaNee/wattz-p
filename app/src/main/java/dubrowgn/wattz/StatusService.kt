@@ -177,7 +177,7 @@ class StatusService : Service() {
                     false -> no
                 }
             )
-            .putExtra("chargeLevel", fmt(snapshot.levelPercent) + "%")
+            .putExtra("level", fmt(snapshot.levelPercent) + "%")
             .putExtra("chargingSince",
                 when (val pluggedInAt = pluggedInAt) {
                     null -> indeterminate
