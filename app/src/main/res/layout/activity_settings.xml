@@ -296,5 +296,67 @@
             app:layout_constraintBottom_toBottomOf="@+id/invertCurrentDesc"
             tools:ignore="UseSwitchCompatOrMaterialXml" />
 
+        <!-- Added: Notification Customization Section -->
+        <TextView
+            android:id="@+id/lblNotificationCustomization"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_margin="@dimen/text_size"
+            android:text="Notification Customization"
+            android:textColor="@color/primary"
+            android:textSize="@dimen/h2_size"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/invertCurrentDesc" />
+
+        <TextView
+            style="@style/Label"
+            android:id="@+id/lblNotificationBackgroundColor"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="@dimen/text_size"
+            android:text="Notification Background Color (Hex)"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/lblNotificationCustomization" />
+
+        <EditText
+            android:id="@+id/notification_background_color"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="@dimen/text_size"
+            android:layout_marginVertical="@dimen/text_size_over_2"
+            android:hint="#FFFFFF"
+            android:inputType="text"
+            android:maxLength="7"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/lblNotificationBackgroundColor" />
+
+        <TextView
+            style="@style/Label"
+            android:id="@+id/lblNotificationTextColor"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="@dimen/text_size"
+            android:text="Notification Text Color (Hex)"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/notification_background_color" />
+
+        <EditText
+            android:id="@+id/notification_text_color"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="@dimen/text_size"
+            android:layout_marginVertical="@dimen/text_size_over_2"
+            android:hint="#000000"
+            android:inputType="text"
+            android:maxLength="7"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/lblNotificationTextColor" />
+
     </androidx.constraintlayout.widget.ConstraintLayout>
 </ScrollView>
