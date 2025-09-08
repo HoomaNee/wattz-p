@@ -1,4 +1,3 @@
-// Modified StatusService.kt
 package dubrowgn.wattz
 
 import android.app.*
@@ -10,10 +9,10 @@ import android.graphics.*
 import android.graphics.drawable.Icon
 import android.os.IBinder
 import android.util.Log
+import android.widget.RemoteViews // Added: Import for RemoteViews
 import java.time.LocalDateTime
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
-
 
 class StatusService : Service() {
     private lateinit var battery: Battery
@@ -59,7 +58,7 @@ class StatusService : Service() {
         val settings = getSharedPreferences(settingsName, MODE_MULTI_PROCESS)
         battery.currentScalar = settings.getFloat("currentScalar", 1f).toDouble()
         battery.invertCurrent = settings.getBoolean("invertCurrent", false)
-        indicatorUnits = settings.getString("indicatorUnits", null);
+        indicatorUnits = settings.getString("indicatorUnits", null)
 
         // Added: Load notification colors from shared preferences
         notificationBackgroundColor = settings.getString("notificationBackgroundColor", "#FFFFFF") ?: "#FFFFFF"
@@ -75,7 +74,7 @@ class StatusService : Service() {
             NotificationChannel(
                 noteChannelId,
                 "Power Status",
-                NotificationManager.IMPORTANCE_HIGH//Notification priority set high
+                NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "Continuously displays current battery power consumption"
             }
@@ -92,11 +91,11 @@ class StatusService : Service() {
 
         val ind = getString(R.string.indeterminate)
         noteBuilder = Notification.Builder(this, noteChannelId)
-            .setSmallIcon(renderIcon(ind, "W")) // Changed: Moved setSmallIcon here as it's still needed
+            .setSmallIcon(renderIcon(ind, "W"))
             .setContentIntent(noteIntent)
             .setOnlyAlertOnce(true)
-            .setPriority(Notification.PRIORITY_HIGH)  // Added to maximize notification priority
-            .setOngoing(true)  // Makes the notification non-dismissible and persistent at top
+            .setPriority(Notification.PRIORITY_HIGH)
+            .setOngoing(true)
             
         registerReceiver(
             MsgReceiver(),
@@ -108,7 +107,7 @@ class StatusService : Service() {
                 addAction(Intent.ACTION_SCREEN_OFF)
                 addAction(Intent.ACTION_SCREEN_ON)
             },
-            RECEIVER_NOT_EXPORTED,
+            RECEIVER_NOT_EXPORTED
         )
     }
 
@@ -127,7 +126,7 @@ class StatusService : Service() {
             error("Failed to foreground StatusService: ${e.message}")
         }
 
-        return START_STICKY;
+        return START_STICKY
     }
 
     override fun onDestroy() {
@@ -155,15 +154,13 @@ class StatusService : Service() {
         paint.textAlign = Paint.Align.CENTER
         
         if (unit.isEmpty()) {
-        // Center the number vertically for percentage in center
-        paint.textSize = 45f * density //Increase icon size 
-        val yPos = (w / 2f) + (paint.textSize / 2f) - paint.descent() / 2f  // Center vertically
-        canvas.drawText(value, w / 2f, yPos, paint)
-          } else {
-        // Original logic for other units (value on top, unit on bottom)
-        paint.textSize = 28f * density
-        canvas.drawText(value, w / 2f, w / 2f, paint)
-        canvas.drawText(unit, w / 2f, w.toFloat(), paint)
+            paint.textSize = 45f * density
+            val yPos = (w / 2f) + (paint.textSize / 2f) - paint.descent() / 2f
+            canvas.drawText(value, w / 2f, yPos, paint)
+        } else {
+            paint.textSize = 28f * density
+            canvas.drawText(value, w / 2f, w / 2f, paint)
+            canvas.drawText(unit, w / 2f, w.toFloat(), paint)
         }
         
         return Icon.createWithBitmap(bitmap)
@@ -226,7 +223,7 @@ class StatusService : Service() {
             "%" -> "Level"
             else -> getString(R.string.power)
         }
-        val txtValue = fmt( when (indicatorUnits) {
+        val txtValue = fmt(when (indicatorUnits) {
             "A" -> snapshot.amps
             "Ah" -> snapshot.energyAmpHours
             "C" -> snapshot.celsius
@@ -249,12 +246,7 @@ class StatusService : Service() {
 
         val iconUnits = if (indicatorUnits == "%") "" else txtUnits
 
-        // Changed: Use custom RemoteViews to apply background and text colors
-        // Note: This requires a new layout file res/layout/custom_notification.xml with:
-        // <LinearLayout android:id="@+id/notification_background" ...>
-        //   <TextView android:id="@+id/notification_title" .../>
-        //   <TextView android:id="@+id/notification_text" .../>
-        // </LinearLayout>
+        // Use custom RemoteViews to apply background and text colors
         val remoteViews = RemoteViews(packageName, R.layout.custom_notification)
         try {
             remoteViews.setInt(R.id.notification_background, "setBackgroundColor", Color.parseColor(notificationBackgroundColor))
@@ -271,7 +263,7 @@ class StatusService : Service() {
             
             noteBuilder
                 .setCustomContentView(remoteViews)
-                .setSmallIcon(renderIcon(txtValue, iconUnits)) // Moved here to update dynamically
+                .setSmallIcon(renderIcon(txtValue, iconUnits))
         } catch (e: IllegalArgumentException) {
             // Fallback if color parsing fails
             debug("Invalid color format: ${e.message}")
