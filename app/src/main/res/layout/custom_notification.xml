@@ -1,0 +1,41 @@
+// <LinearLayout android:id="@+id/notification_background" ...>
+//   <TextView android:id="@+id/notification_title" .../>
+//   <TextView android:id="@+id/notification_text" .../>
+// </LinearLayout>
+        val remoteViews = RemoteViews(packageName, R.layout.custom_notification)
+        try {
+            remoteViews.setInt(R.id.notification_background, "setBackgroundColor", Color.parseColor(notificationBackgroundColor))
+            remoteViews.setTextViewText(R.id.notification_title, title)
+            remoteViews.setTextColor(R.id.notification_title, Color.parseColor(notificationTextColor))
+            
+            val contentText = when(val seconds = snapshot.secondsUntilCharged) {
+                null -> ""
+                0.0 -> "fully charged"
+                else -> "${fmtSeconds(seconds)} until full charge"
+            }
+            remoteViews.setTextViewText(R.id.notification_text, contentText)
+            remoteViews.setTextColor(R.id.notification_text, Color.parseColor(notificationTextColor))
+            
+            noteBuilder
+                .setCustomContentView(remoteViews)
+                .setSmallIcon(renderIcon(txtValue, iconUnits)) // Moved here to update dynamically
+        } catch (e: IllegalArgumentException) {
+            // Fallback if color parsing fails
+            debug("Invalid color format: ${e.message}")
+            noteBuilder
+                .setContentTitle(title)
+                .setContentText(
+                    when(val seconds = snapshot.secondsUntilCharged) {
+                        null -> ""
+                        0.0 -> "fully charged"
+                        else -> "${fmtSeconds(seconds)} until full charge"
+                    }
+                )
+                .setSmallIcon(renderIcon(txtValue, iconUnits))
+        }
+
+        noteMgr.notify(noteId, noteBuilder.build())
+
+        updateData()
+    }
+}
