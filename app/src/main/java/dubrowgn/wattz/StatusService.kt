@@ -1,3 +1,4 @@
+// Modified StatusService.kt
 package dubrowgn.wattz
 
 import android.app.*
@@ -23,6 +24,10 @@ class StatusService : Service() {
     private var pluggedInAt: ZonedDateTime? = null
     private lateinit var snapshot: BatterySnapshot
     private val task = PeriodicTask({ update() }, intervalMs)
+
+    // Added: Variables to store notification colors from settings
+    private var notificationBackgroundColor: String = "#FFFFFF"
+    private var notificationTextColor: String = "#000000"
 
     private fun debug(msg: String) {
         Log.d(this::class.java.name, msg)
@@ -55,6 +60,10 @@ class StatusService : Service() {
         battery.currentScalar = settings.getFloat("currentScalar", 1f).toDouble()
         battery.invertCurrent = settings.getBoolean("invertCurrent", false)
         indicatorUnits = settings.getString("indicatorUnits", null);
+
+        // Added: Load notification colors from shared preferences
+        notificationBackgroundColor = settings.getString("notificationBackgroundColor", "#FFFFFF") ?: "#FFFFFF"
+        notificationTextColor = settings.getString("notificationTextColor", "#000000") ?: "#000000"
     }
 
     private fun init() {
@@ -83,8 +92,7 @@ class StatusService : Service() {
 
         val ind = getString(R.string.indeterminate)
         noteBuilder = Notification.Builder(this, noteChannelId)
-            .setContentTitle("Battery Draw: $ind W")
-            .setSmallIcon(renderIcon(ind, "W"))
+            .setSmallIcon(renderIcon(ind, "W")) // Changed: Moved setSmallIcon here as it's still needed
             .setContentIntent(noteIntent)
             .setOnlyAlertOnce(true)
             .setPriority(Notification.PRIORITY_HIGH)  // Added to maximize notification priority
@@ -241,17 +249,43 @@ class StatusService : Service() {
 
         val iconUnits = if (indicatorUnits == "%") "" else txtUnits
 
-        noteBuilder
-            .setContentTitle(title)
-            .setSmallIcon(renderIcon(txtValue, iconUnits))
-
-        noteBuilder.setContentText(
-            when(val seconds = snapshot.secondsUntilCharged) {
+        // Changed: Use custom RemoteViews to apply background and text colors
+        // Note: This requires a new layout file res/layout/custom_notification.xml with:
+        // <LinearLayout android:id="@+id/notification_background" ...>
+        //   <TextView android:id="@+id/notification_title" .../>
+        //   <TextView android:id="@+id/notification_text" .../>
+        // </LinearLayout>
+        val remoteViews = RemoteViews(packageName, R.layout.custom_notification)
+        try {
+            remoteViews.setInt(R.id.notification_background, "setBackgroundColor", Color.parseColor(notificationBackgroundColor))
+            remoteViews.setTextViewText(R.id.notification_title, title)
+            remoteViews.setTextColor(R.id.notification_title, Color.parseColor(notificationTextColor))
+            
+            val contentText = when(val seconds = snapshot.secondsUntilCharged) {
                 null -> ""
                 0.0 -> "fully charged"
                 else -> "${fmtSeconds(seconds)} until full charge"
             }
-        )
+            remoteViews.setTextViewText(R.id.notification_text, contentText)
+            remoteViews.setTextColor(R.id.notification_text, Color.parseColor(notificationTextColor))
+            
+            noteBuilder
+                .setCustomContentView(remoteViews)
+                .setSmallIcon(renderIcon(txtValue, iconUnits)) // Moved here to update dynamically
+        } catch (e: IllegalArgumentException) {
+            // Fallback if color parsing fails
+            debug("Invalid color format: ${e.message}")
+            noteBuilder
+                .setContentTitle(title)
+                .setContentText(
+                    when(val seconds = snapshot.secondsUntilCharged) {
+                        null -> ""
+                        0.0 -> "fully charged"
+                        else -> "${fmtSeconds(seconds)} until full charge"
+                    }
+                )
+                .setSmallIcon(renderIcon(txtValue, iconUnits))
+        }
 
         noteMgr.notify(noteId, noteBuilder.build())
 
