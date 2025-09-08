@@ -1,1 +1,5 @@
 ../values-en/strings.xml
+
+<string name="notification_customization">Notification Customization</string>
+<string name="notification_background_color">Notification Background Color (Hex)</string>
+<string name="notification_text_color">Notification Text Color (Hex)</string>
