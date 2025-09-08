@@ -148,7 +148,7 @@ class StatusService : Service() {
         
         if (unit.isEmpty()) {
         // Center the number vertically for percentage in center
-        paint.textSize = 46f * density //Increase icon size 
+        paint.textSize = 45f * density //Increase icon size 
         val yPos = (w / 2f) + (paint.textSize / 2f) - paint.descent() / 2f  // Center vertically
         canvas.drawText(value, w / 2f, yPos, paint)
           } else {
@@ -177,7 +177,7 @@ class StatusService : Service() {
                     false -> no
                 }
             )
-            .putExtra("level", fmt(snapshot.levelPercent) + "%")
+            .putExtra("chargeLevel", fmt(snapshot.levelPercent) + "%")
             .putExtra("chargingSince",
                 when (val pluggedInAt = pluggedInAt) {
                     null -> indeterminate
@@ -215,7 +215,7 @@ class StatusService : Service() {
             "C" -> getString(R.string.temperature)
             "V" -> getString(R.string.voltage)
             "Wh" -> getString(R.string.energy)
-            "%" -> getString(R.string.chargeLevel)
+            "%" -> getString(R.string.level)
             else -> getString(R.string.power)
         }
         val txtValue = fmt( when (indicatorUnits) {
