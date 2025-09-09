@@ -141,7 +141,7 @@ class StatusService : Service() {
         val textSize = 28f * density
         val paint = Paint()
         paint.textSize = textSize
-        paint.typeface = Typeface.DEFAULT_BOLD
+        paint.typeface = Typeface.DEFAULT
         paint.style = Paint.Style.FILL
         paint.color = Color.WHITE
         paint.textAlign = Paint.Align.CENTER
